@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    /**
+     * ========================================================================
+     * HEISENBERG LAB SUPPLY INTELLIGENCE - FIRESTORE SECURITY RULES
+     * ========================================================================
+     * 
+     * PURPOSE:
+     * Defines access control policies for simulated chemical inventory collections.
+     * Designed for educational demonstrations and ₹0 cost Spark Plan compliance.
+     * 
+     * COLLECTIONS:
+     * - /chemicals/{chemicalId}
+     * - /suppliers/{supplierId}
+     * - /transactions/{transactionId}
+     * - /alerts/{alertId}
+     * ========================================================================
+     */
+
+    // Helper functions for data validation
+    function hasValidChemicalData() {
+      return request.resource.data.name is string &&
+             request.resource.data.quantity is number &&
+             request.resource.data.quantity >= 0 &&
+             request.resource.data.minimumStock is number &&
+             request.resource.data.maximumStock is number &&
+             request.resource.data.maximumStock > request.resource.data.minimumStock;
+    }
+
+    function hasValidTransactionData() {
+      return request.resource.data.chemicalId is string &&
+             (request.resource.data.type == 'IN' || request.resource.data.type == 'OUT') &&
+             request.resource.data.quantity is number &&
+             request.resource.data.quantity > 0;
+    }
+
+    // 1. Chemicals Collection: Public read & controlled write for simulation
+    match /chemicals/{chemicalId} {
+      allow read: if true;
+      allow create, update: if hasValidChemicalData();
+      allow delete: if true;
+    }
+
+    // 2. Suppliers Collection: Public read & structured supplier creation
+    match /suppliers/{supplierId} {
+      allow read: if true;
+      allow write: if request.resource.data.name is string;
+    }
+
+    // 3. Transactions Collection: Immutable audit trail (No updates or deletes allowed)
+    match /transactions/{transactionId} {
+      allow read: if true;
+      allow create: if hasValidTransactionData();
+      allow update, delete: if false; // Transactions are immutable audit logs!
+    }
+
+    // 4. Alerts Collection: Public read & intelligence engine alerts sync
+    match /alerts/{alertId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,17 @@
+# Firebase cache
+.firebase/
+.firebaserc.local
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & temp
+*.log
+scratch/
+test-*.html
+run_*.py
+
+# Secrets & Local Environment Config
+firebase-env.js

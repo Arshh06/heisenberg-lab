@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heisenberg Lab Supply Intelligence | Cloud Chemical Simulation</title>
+  <meta name="description" content="College micro-project demonstrating cloud computing, Firebase Cloud Firestore, and intelligent laboratory inventory management running ₹0 on the Firebase Spark plan.">
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- App Styles -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Chart.js for analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ========================================================================
+       APPLICATION HEADER
+       ======================================================================== -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <img src="assets/logo.svg" alt="Heisenberg Lab Logo" class="brand-logo" id="app-logo">
+        <div>
+          <h1 class="brand-title">
+            HEISENBERG LAB SUPPLY INTELLIGENCE
+          </h1>
+          <p class="brand-subtitle">Cloud-Based Chemical Inventory & Supply Simulation (Educational ₹0 Spark Plan)</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Cloud Status Badge -->
+        <div class="cloud-status-badge" id="cloud-status-btn" title="Click to view/edit Firebase Cloud Config">
+          <div class="status-dot" id="cloud-status-dot"></div>
+          <span id="cloud-status-text">Cloud Live</span>
+        </div>
+
+        <button class="btn btn-secondary btn-sm" id="btn-seed-data" title="Populate realistic educational inventory records">
+          <span>⚡</span> Seed Sample Lab Data
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-open-stock-in">
+          <span>➕</span> Stock IN
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-open-stock-out">
+          <span>➖</span> Stock OUT
+        </button>
+        <button class="btn btn-primary btn-sm" id="btn-open-add-chemical">
+          <span>🧪</span> New Chemical
+        </button>
+        <button class="btn btn-secondary btn-icon" id="btn-print-report" title="Print Inventory Report">
+          <span>🖨️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       NAVIGATION TABS
+       ======================================================================== -->
+  <nav class="nav-tabs-container">
+    <button class="nav-tab active" data-target="tab-overview">
+      <span>📊</span> Dashboard Overview
+    </button>
+    <button class="nav-tab" data-target="tab-inventory">
+      <span>🧪</span> Chemical Inventory
+      <span class="tab-badge" id="badge-total-chemicals">0</span>
+    </button>
+    <button class="nav-tab" data-target="tab-reorder">
+      <span>⚡</span> Reorder Intelligence
+      <span class="tab-badge" id="badge-reorder-count">0</span>
+    </button>
+    <button class="nav-tab" data-target="tab-alerts">
+      <span>🚨</span> Active Alerts
+      <span class="tab-badge" id="badge-alerts-count">0</span>
+    </button>
+    <button class="nav-tab" data-target="tab-transactions">
+      <span>📜</span> Transactions Ledger
+      <span class="tab-badge" id="badge-trans-count">0</span>
+    </button>
+    <button class="nav-tab" data-target="tab-suppliers">
+      <span>🏢</span> Suppliers Directory
+      <span class="tab-badge" id="badge-supp-count">0</span>
+    </button>
+    <button class="nav-tab" data-target="tab-viva">
+      <span>☁️</span> Cloud Architecture & Viva Guide
+    </button>
+  </nav>
+
+  <!-- ========================================================================
+       MAIN DASHBOARD CONTENT AREA
+       ======================================================================== -->
+  <main class="main-content">
+    
+    <!-- STATS METRICS ROW (Always visible at top) -->
+    <section class="stats-grid" aria-label="Inventory Statistics Overview">
+      <div class="stat-card total">
+        <div class="stat-header">
+          <span class="stat-title">Total Chemicals</span>
+          <span class="stat-icon">🧪</span>
+        </div>
+        <div class="stat-value" id="stat-total-chemicals">0</div>
+        <div class="stat-meta">Simulated inventory items</div>
+      </div>
+
+      <div class="stat-card normal">
+        <div class="stat-header">
+          <span class="stat-title">Normal Stock</span>
+          <span class="stat-icon">✅</span>
+        </div>
+        <div class="stat-value" id="stat-normal-stock">0</div>
+        <div class="stat-meta" id="stat-normal-meta">Above minimum threshold</div>
+      </div>
+
+      <div class="stat-card low">
+        <div class="stat-header">
+          <span class="stat-title">Low Stock</span>
+          <span class="stat-icon">⚠️</span>
+        </div>
+        <div class="stat-value" id="stat-low-stock">0</div>
+        <div class="stat-meta">&lt; Min stock threshold</div>
+      </div>
+
+      <div class="stat-card critical">
+        <div class="stat-header">
+          <span class="stat-title">Critical Stock</span>
+          <span class="stat-icon">🚨</span>
+        </div>
+        <div class="stat-value" id="stat-critical-stock">0</div>
+        <div class="stat-meta">&lt; 50% of minimum stock</div>
+      </div>
+
+      <div class="stat-card expiring">
+        <div class="stat-header">
+          <span class="stat-title">Expiring Soon</span>
+          <span class="stat-icon">⏳</span>
+        </div>
+        <div class="stat-value" id="stat-expiring-soon">0</div>
+        <div class="stat-meta">Within 30 simulated days</div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         TAB 1: DASHBOARD OVERVIEW & ANALYTICS
+         ====================================================================== -->
+    <div class="tab-pane active" id="tab-overview">
+      <div class="charts-row">
+        <!-- Chart 1: Categories Breakdown -->
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>📊 Inventory by Chemical Category</span>
+            <span style="font-size: 0.72rem; color: var(--text-dim);">Live Quantity Analysis</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Stock Health Distribution -->
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>🛡️ Stock Health Distribution</span>
+            <span style="font-size: 0.72rem; color: var(--text-dim);">Normal vs Deficit</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="healthChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Snapshot: Top Reorder Recommendations & Recent Alerts -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1rem;">
+        
+        <!-- Urgent Procurement Box -->
+        <div class="section-card">
+          <div class="section-header">
+            <h2 class="section-title"><span>⚡</span> Immediate Reorder Recommendations</h2>
+            <button class="btn btn-secondary btn-sm" onclick="document.querySelector('[data-target=\'tab-reorder\']').click()">View All</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Chemical</th>
+                  <th>Current Stock</th>
+                  <th>Min / Max</th>
+                  <th>Reorder Qty</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+                <tbody id="overview-reorder-body">
+                <tr><td colspan="5" style="text-align: center; color: var(--text-dim);">No urgent reorders required.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Urgent Alerts Box -->
+        <div class="section-card">
+          <div class="section-header">
+            <h2 class="section-title"><span>🚨</span> Critical Lab Alerts</h2>
+            <button class="btn btn-secondary btn-sm" onclick="document.querySelector('[data-target=\'tab-alerts\']').click()">View All Alerts</button>
+          </div>
+          <div class="alerts-list" id="overview-alerts-list">
+            <div class="alert-item" style="border-left-color: var(--status-normal);">
+              <div class="alert-main">
+                <span class="alert-icon">✨</span>
+                <div>
+                  <div class="alert-message">All simulated chemical inventory stocks are stable.</div>
+                  <div class="alert-time">Real-time Cloud Monitor</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         TAB 2: CHEMICAL INVENTORY MATRIX
+         ====================================================================== -->
+    <div class="tab-pane" id="tab-inventory">
+      <div class="section-card">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>🧪</span> Simulated Chemical Inventory Database
+          </h2>
+          <div class="filter-bar">
+            <input type="text" id="inventory-search" class="search-input" placeholder="🔍 Search chemical or formula...">
+            <select id="filter-category" class="filter-select">
+              <option value="ALL">All Categories</option>
+              <option value="Solvent">Solvent</option>
+              <option value="Acid">Acid</option>
+              <option value="Base">Base</option>
+              <option value="Salt">Salt</option>
+              <option value="Indicator">Indicator</option>
+              <option value="Reagent">Reagent</option>
+            </select>
+            <select id="filter-status" class="filter-select">
+              <option value="ALL">All Stock Statuses</option>
+              <option value="NORMAL">Normal Stock</option>
+              <option value="LOW">Low Stock</option>
+              <option value="CRITICAL">Critical Stock</option>
+              <option value="EXPIRING_SOON">Expiring Soon</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="btn-add-chem-tab">
+              <span>➕</span> Add Chemical
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" id="inventory-table">
+            <thead>
+              <tr>
+                <th>Chemical</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Min / Max</th>
+                <th>Expiry Date</th>
+                <th>Storage</th>
+                <th>Status</th>
+                <th>Recommended Order</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-table-body">
+              <tr>
+                <td colspan="10" style="text-align:center; padding: 2rem; color: var(--text-dim);">
+                  Loading simulated laboratory inventory from Cloud Firestore...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         TAB 3: REORDER INTELLIGENCE
+         ====================================================================== -->
+    <div class="tab-pane" id="tab-reorder">
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><span>⚡</span> Supply Intelligence & Automated Reorder Generator</h2>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Algorithm: <code>recommendedOrder = Math.max(0, maximumStock - currentQuantity)</code> when stock falls below minimum threshold.
+            </p>
+          </div>
+          <button class="btn btn-success btn-sm" id="btn-reorder-all-critical">
+            <span>⚡</span> Restock All Critical (Simulate Bulk PO)
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Chemical</th>
+                <th>Status</th>
+                <th>Current Stock</th>
+                <th>Min Threshold</th>
+                <th>Max Target</th>
+                <th>Stock Deficit</th>
+                <th>Recommended Reorder</th>
+                <th>Assigned Supplier</th>
+                <th>Procurement Action</th>
+              </tr>
+            </thead>
+            <tbody id="reorder-table-body">
+              <tr><td colspan="9" style="text-align: center;">No reorders needed.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         TAB 4: ALERTS FEED
+         ====================================================================== -->
+    <div class="tab-pane" id="tab-alerts">
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><span>🚨</span> Inventory Intelligence Alerts Feed</h2>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Real-time rule engine alerts triggered on Low Stock, Critical Stock (&lt;50% Min), and Expiry (&lt;30 days).
+            </p>
+          </div>
+          <div class="filter-bar">
+            <select id="filter-alert-severity" class="filter-select">
+              <option value="ALL">All Alerts</option>
+              <option value="critical">Critical Severity</option>
+              <option value="warning">Warning Severity</option>
+              <option value="info">Info / Normal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="alerts-list" id="alerts-full-list">
+          <p style="color: var(--text-dim); text-align: center;">No active alerts.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         TAB 5: TRANSACTIONS LEDGER
+         ====================================================================== -->
+    <div class="tab-pane" id="tab-transactions">
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><span>📜</span> Stock Movement Audit Ledger</h2>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Immutable audit log of all simulated Stock-IN (Restock/Procurement) and Stock-OUT (Lab Consumption) transactions.
+            </p>
+          </div>
+          <div class="filter-bar">
+            <select id="filter-transaction-type" class="filter-select">
+              <option value="ALL">All Transactions</option>
+              <option value="IN">Stock IN Only</option>
+              <option value="OUT">Stock OUT Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Transaction ID</th>
+                <th>Chemical Name</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Experiment / Audit Notes</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-table-body">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-dim);">No transactions recorded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         TAB 6: SUPPLIERS DIRECTORY
+         ====================================================================== -->
+    <div class="tab-pane" id="tab-suppliers">
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title"><span>🏢</span> Simulated Chemical Suppliers Network</h2>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
+              Registered educational laboratory suppliers and vendor ratings.
+            </p>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-add-supplier">
+            <span>➕</span> Add Supplier
+          </button>
+        </div>
+
+        <div class="suppliers-grid" id="suppliers-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         TAB 7: CLOUD ARCHITECTURE & VIVA GUIDE
+         ====================================================================== -->
+    <div class="tab-pane" id="tab-viva">
+      <div class="viva-container">
+        
+        <!-- Architecture Explanation Card -->
+        <div class="arch-card">
+          <h2 class="section-title" style="color: var(--accent-primary);">
+            <span>☁️</span> Cloud Architecture & ₹0 Spark Plan Design
+          </h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.5rem 0 1rem;">
+            This micro-project demonstrates serverless cloud computing principles using Google Firebase at ₹0 cost without needing a credit card or billing account.
+          </p>
+
+          <div class="arch-diagram-box">
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CLIENT / BROWSER TIER                             │
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │ HTML5 + Vanilla CSS3 + Modern JavaScript ES6                          │  │
+│  │                                                                       │  │
+│  │ • Inventory Intelligence Rules Engine (Client-Side Math)              │  │
+│  │ • Real-time State & Live Charting (Chart.js)                          │  │
+│  │ • Stock IN / OUT Safety Validations (Negative Stock Prevention)        │  │
+│  └───────────────────────────────────┬───────────────────────────────────┘  │
+└──────────────────────────────────────┼──────────────────────────────────────┘
+                                       │ Direct Web SDK v10 (HTTPS/gRPC)
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          GOOGLE CLOUD / FIREBASE                            │
+│                                                                             │
+│  ┌───────────────────────────────────┐   ┌───────────────────────────────┐  │
+│  │       Firebase Hosting (CDN)      │   │     Firebase Cloud Firestore  │  │
+│  │   • Fast Global Edge Caching      │   │   • NoSQL Document Store      │  │
+│  │   • Free SSL / HTTPS              │   │   • Real-Time Subscriptions   │  │
+│  │   • 10 GB Storage / 360 MB/day    │   │   • 50k Reads / 20k Writes/day│  │
+│  └───────────────────────────────────┘   └───────────────────────────────┘  │
+│                                                                             │
+│   Collections: chemicals | suppliers | transactions | alerts                │
+└─────────────────────────────────────────────────────────────────────────────┘
+          </div>
+
+          <h3 style="font-size: 0.95rem; font-weight: 700; margin-top: 1.25rem; color: #fff;">
+            💡 Why This Design Succeeds in a Viva:
+          </h3>
+          <ul style="font-size: 0.82rem; color: var(--text-muted); margin-left: 1.25rem; margin-top: 0.5rem; line-height: 1.8;">
+            <li><strong>Zero Server Maintenance:</strong> No Node.js or Python backend servers to deploy, monitor, or pay for.</li>
+            <li><strong>₹0 Budget Compliance:</strong> Fits 100% within the free Firebase Spark plan limits (50k daily Firestore reads, 20k daily writes).</li>
+            <li><strong>No Cloud Functions Required:</strong> Inventory intelligence formulas (Critical threshold, Expiry warnings, Reorder quantities) execute client-side in Vanilla JS, avoiding the paid Blaze plan mandate for Cloud Functions.</li>
+            <li><strong>Real-time Synchronous Updates:</strong> Firestore's <code>onSnapshot()</code> listener pushes live inventory updates instantly to all connected browser tabs.</li>
+          </ul>
+        </div>
+
+        <!-- Top Viva Questions & Answers -->
+        <div class="arch-card">
+          <h2 class="section-title" style="color: var(--accent-secondary);">
+            <span>🎓</span> Top Viva Questions & Answers for Demonstrations
+          </h2>
+          
+          <div class="viva-qa-grid">
+            <div class="viva-qa-card">
+              <div class="viva-q">Q1. What is the cloud service model used here?</div>
+              <div class="viva-a">
+                It uses <strong>Backend-as-a-Service (BaaS)</strong> / Serverless. Firebase provides database management (Cloud Firestore) and static web hosting (Firebase Hosting) without provisioning virtual machines (IaaS).
+              </div>
+            </div>
+
+            <div class="viva-qa-card">
+              <div class="viva-q">Q2. Why is Cloud Firestore called a NoSQL database?</div>
+              <div class="viva-a">
+                Firestore is a document-oriented NoSQL database. It organizes data into <strong>Collections</strong> of JSON-like <strong>Documents</strong> with flexible schemas, rather than relational tables with fixed rows and columns.
+              </div>
+            </div>
+
+            <div class="viva-qa-card">
+              <div class="viva-q">Q3. How does the application prevent negative inventory?</div>
+              <div class="viva-a">
+                During Stock-OUT transactions, client-side validation checks <code>requestedQuantity &lt;= currentQuantity</code> before committing the change to Firestore. If requested amount exceeds current stock, the operation is blocked with an error toast.
+              </div>
+            </div>
+
+            <div class="viva-qa-card">
+              <div class="viva-q">Q4. How is ₹0 cost guaranteed on the Firebase Spark Plan?</div>
+              <div class="viva-a">
+                We strictly use services included in Firebase's perpetual free tier (Firestore & Hosting) and avoided Cloud Functions / external APIs that require upgrading to the pay-as-you-go Blaze plan.
+              </div>
+            </div>
+
+            <div class="viva-qa-card">
+              <div class="viva-q">Q5. How does the Reorder Intelligence rule work?</div>
+              <div class="viva-a">
+                When <code>currentQuantity &lt; minimumStock</code>, the system calculates <code>recommendedOrder = maximumStock - currentQuantity</code>. If stock is at or above maximum target, recommended order evaluates to 0.
+              </div>
+            </div>
+
+            <div class="viva-qa-card">
+              <div class="viva-q">Q6. What happens if a chemical is within 30 days of expiry?</div>
+              <div class="viva-a">
+                The intelligence engine calculates the difference between simulated <code>expiryDate</code> and today. If <code>&lt;= 30 days</code>, it displays an <code>EXPIRING_SOON</code> warning badge and dispatches an alert in the feed without mutating the chemical's inventory stock level balance.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================
+       MODAL 1: STOCK IN
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-stock-in">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>➕</span> Record Stock-IN (Restock)</h3>
+        <button class="modal-close" data-close="modal-stock-in">&times;</button>
+      </div>
+      <form id="form-stock-in">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Select Chemical</label>
+            <select id="stock-in-chemical" class="form-control" required>
+              <option value="">-- Choose Chemical --</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Quantity to Add</label>
+              <input type="number" id="stock-in-qty" class="form-control" min="0.01" step="any" placeholder="e.g. 25" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unit</label>
+              <input type="text" id="stock-in-unit" class="form-control" placeholder="Auto-filled" readonly>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Supplier / Source (Optional)</label>
+            <select id="stock-in-supplier" class="form-control">
+              <option value="">-- Select Supplier --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Batch No. / Restock Notes</label>
+            <input type="text" id="stock-in-notes" class="form-control" placeholder="e.g., Routine monthly shipment refill" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-stock-in">Cancel</button>
+          <button type="submit" class="btn btn-success">Confirm Stock IN</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 2: STOCK OUT (CONSUMPTION)
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-stock-out">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>➖</span> Record Stock-OUT (Lab Consumption)</h3>
+        <button class="modal-close" data-close="modal-stock-out">&times;</button>
+      </div>
+      <form id="form-stock-out">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Select Chemical</label>
+            <select id="stock-out-chemical" class="form-control" required>
+              <option value="">-- Choose Chemical --</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Current In-Stock</label>
+              <input type="text" id="stock-out-current" class="form-control" readonly placeholder="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Quantity to Consume</label>
+              <input type="number" id="stock-out-qty" class="form-control" min="0.01" step="any" placeholder="e.g. 5" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Lab Experiment / Purpose Notes</label>
+            <input type="text" id="stock-out-notes" class="form-control" placeholder="e.g., Organic Synthesis Practical Demo 3" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-stock-out">Cancel</button>
+          <button type="submit" class="btn btn-danger">Confirm Stock OUT</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 3: ADD / EDIT CHEMICAL
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-add-chemical">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="chemical-modal-title"><span>🧪</span> Add Simulated Chemical</h3>
+        <button class="modal-close" data-close="modal-add-chemical">&times;</button>
+      </div>
+      <form id="form-add-chemical">
+        <input type="hidden" id="chem-edit-id" value="">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Chemical Name</label>
+            <input type="text" id="chem-name" class="form-control" placeholder="e.g., Hydrochloric Acid 37%" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select id="chem-category" class="form-control" required>
+                <option value="Solvent">Solvent</option>
+                <option value="Acid">Acid</option>
+                <option value="Base">Base</option>
+                <option value="Salt">Salt</option>
+                <option value="Indicator">Indicator</option>
+                <option value="Reagent">Reagent</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unit of Measurement</label>
+              <select id="chem-unit" class="form-control" required>
+                <option value="L">Liters (L)</option>
+                <option value="mL">Milliliters (mL)</option>
+                <option value="kg">Kilograms (kg)</option>
+                <option value="g">Grams (g)</option>
+                <option value="Bottles">Bottles</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Current Quantity</label>
+              <input type="number" id="chem-qty" class="form-control" min="0" step="any" placeholder="e.g., 20" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Minimum Stock (Threshold)</label>
+              <input type="number" id="chem-min" class="form-control" min="0" step="any" placeholder="e.g., 10" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Maximum Stock (Target)</label>
+              <input type="number" id="chem-max" class="form-control" min="1" step="any" placeholder="e.g., 50" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Simulated Expiry Date</label>
+              <input type="date" id="chem-expiry" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Storage Location</label>
+              <input type="text" id="chem-storage" class="form-control" placeholder="e.g., Acid Cabinet B-2" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Supplier</label>
+              <select id="chem-supplier" class="form-control">
+                <option value="">-- Select Supplier --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-add-chemical">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-chemical">Save Chemical</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 4: ADD SUPPLIER
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-add-supplier">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>🏢</span> Register Simulated Supplier</h3>
+        <button class="modal-close" data-close="modal-add-supplier">&times;</button>
+      </div>
+      <form id="form-add-supplier">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Supplier / Company Name</label>
+            <input type="text" id="supp-name" class="form-control" placeholder="e.g., Albuquerque Chemical Supply" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact (Email / Phone)</label>
+            <input type="text" id="supp-contact" class="form-control" placeholder="e.g., orders@abqchemical.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <input type="text" id="supp-location" class="form-control" placeholder="e.g., New Mexico, USA" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Vendor Rating</label>
+            <select id="supp-rating" class="form-control" required>
+              <option value="5.0">⭐⭐⭐⭐⭐ 5.0 (Top Tier)</option>
+              <option value="4.5">⭐⭐⭐⭐½ 4.5 (High Quality)</option>
+              <option value="4.0">⭐⭐⭐⭐ 4.0 (Good)</option>
+              <option value="3.5">⭐⭐⭐½ 3.5 (Standard)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-add-supplier">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Supplier</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 5: FIREBASE CLOUD CONFIGURATION EXPLORER
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-cloud-config">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>☁️</span> Firebase Cloud Connectivity</h3>
+        <button class="modal-close" data-close="modal-cloud-config">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1rem;">
+          The application is actively integrated with Google Cloud Firestore and configured for ₹0 free-tier deployment on the Firebase Spark plan.
+        </p>
+        
+        <div style="background: var(--bg-input); padding: 0.85rem; border-radius: var(--radius-md); font-size: 0.78rem; font-family: monospace; color: var(--accent-primary); margin-bottom: 1rem;">
+          Current Status: <span id="modal-cloud-status-text" style="font-weight: 700;">Connected to Google Cloud Firestore</span>
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.7;">
+          <strong style="color: var(--text-main);">Live Cloud Infrastructure Details:</strong>
+          <ul style="margin-left: 1.25rem; margin-top: 0.4rem; list-style-type: '✓ ';">
+            <li><strong style="color: #fff;">Firebase Project ID:</strong> <code>heisenberg-6d136</code></li>
+            <li><strong style="color: #fff;">Cloud Region:</strong> Mumbai (<code>asia-south1</code>)</li>
+            <li><strong style="color: #fff;">Database Engine:</strong> Cloud Firestore (Standard NoSQL)</li>
+            <li><strong style="color: #fff;">Pricing Tier:</strong> Spark Plan (₹0 / Perpetual Free Tier)</li>
+            <li><strong style="color: #fff;">Security Mode:</strong> Production Rules (Immutable Audit Trail)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-close="modal-cloud-config">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       TOAST CONTAINER
+       ======================================================================== -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ========================================================================
+       FOOTER
+       ======================================================================== -->
+  <footer class="app-footer">
+    <p>
+      <span class="footer-highlight">Breaking Bad Heisenberg: Chemical Lab Supply Intelligence</span> | College Cloud Technology Micro-Project
+    </p>
+    <p style="margin-top: 0.25rem;">
+      Architecture: Firebase Hosting + Cloud Firestore (NoSQL) | Spark Plan ₹0 Free Tier
+    </p>
+  </footer>
+
+  <!-- Local Environment Config (Optional / Untracked) -->
+  <script src="firebase-env.js" onerror="/* local env optional */"></script>
+
+  <!-- Application Logic (ES Module) -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
